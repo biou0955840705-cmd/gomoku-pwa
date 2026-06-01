@@ -4,19 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#667eea">
-    <meta name="description" content="一款與 AI 對戰的五子棋遊戲，支持多個難度等級">
+    <meta name="description" content="五子棋遊戲 - 最困難 AI，支持手機與 PWA。">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="五子棋">
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='96' y='120' font-size='100' text-anchor='middle' fill='white' font-weight='bold'>五</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23667eea' width='180' height='180' rx='40'/><text x='90' y='130' font-size='100' text-anchor='middle' fill='white' font-weight='bold'>五</text></svg>">
-    <title>五子棋遊戲 - AI對手</title>
+    <title>五子棋遊戲 - 最困難</title>
     <style>
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
 
         body {
@@ -25,27 +24,30 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: radial-gradient(circle at top, rgba(255,255,255,0.18), transparent 30%), linear-gradient(135deg, #1f2b71 0%, #6237a0 55%, #2a91d1 100%);
             padding: 20px;
+            color: #222;
         }
 
         .container {
             text-align: center;
+            width: min(100%, 1024px);
+            padding: 0 12px;
         }
 
         h1 {
             color: white;
-            margin-bottom: 20px;
+            margin-bottom: 6px;
             font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.35);
         }
 
         .game-info {
             background: rgba(255, 255, 255, 0.95);
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 16px;
             margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.18);
         }
 
         .game-info p {
@@ -60,12 +62,60 @@
             font-size: 1.3em;
         }
 
+        .game-meta {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .meta-chip {
+            background: rgba(255,255,255,0.18);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 0.95em;
+            border: 1px solid rgba(255,255,255,0.22);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin: 20px auto 10px;
+            max-width: 980px;
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.92);
+            border-radius: 18px;
+            padding: 18px;
+            text-align: left;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+            min-height: 120px;
+        }
+
+        .feature-card h2 {
+            margin-bottom: 8px;
+            font-size: 1.1em;
+            color: #222;
+        }
+
+        .feature-card p {
+            color: #444;
+            line-height: 1.6;
+            font-size: 0.98em;
+        }
+
         .game-board-container {
             background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            padding: 22px;
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.22);
             display: inline-block;
+            margin-bottom: 18px;
         }
 
         #gameBoard {
@@ -152,21 +202,6 @@
             transform: scale(0.98);
         }
 
-        .difficulty {
-            margin: 15px 0;
-            color: #333;
-        }
-
-        .difficulty label {
-            margin: 0 15px;
-            font-weight: 500;
-        }
-
-        .difficulty input[type="radio"] {
-            margin-right: 5px;
-            cursor: pointer;
-        }
-
         .message {
             margin-top: 15px;
             padding: 10px;
@@ -197,27 +232,32 @@
 <body>
     <div class="container">
         <h1>🎮 五子棋遊戲</h1>
-        
+
         <div class="game-info">
             <p>你是 <span style="color: #333; font-weight: bold;">● 黑棋</span> | AI 是 <span style="color: #999; font-weight: bold;">○ 白棋</span></p>
             <p class="status" id="status">你的回合</p>
             <p>黑子數: <span id="blackCount">0</span> | 白子數: <span id="whiteCount">0</span></p>
         </div>
 
-        <div class="difficulty">
-            <label>難度選擇:</label>
-            <label>
-                <input type="radio" name="difficulty" value="easy" checked>
-                簡單
-            </label>
-            <label>
-                <input type="radio" name="difficulty" value="medium">
-                中等
-            </label>
-            <label>
-                <input type="radio" name="difficulty" value="hard">
-                困難
-            </label>
+        <div class="game-meta">
+            <span class="meta-chip">難度：最困難</span>
+            <span class="meta-chip">快速落子保護</span>
+            <span class="meta-chip">離線可玩</span>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h2>遊戲特色</h2>
+                <p>AI 採用搜索與威脅偵測，讓每場對弈都更具挑戰。</p>
+            </div>
+            <div class="feature-card">
+                <h2>操作優化</h2>
+                <p>觸控與鼠標皆支援，落子期間輸入鎖定避免重複點擊。</p>
+            </div>
+            <div class="feature-card">
+                <h2>玩法提示</h2>
+                <p>佔據中心、擴展活三，才能對抗最困難的 AI。</p>
+            </div>
         </div>
 
         <div class="game-board-container">
@@ -241,7 +281,8 @@
         let board = [];
         let gameOver = false;
         let moveHistory = [];
-        let difficulty = 'medium';
+        let inputLocked = false;
+        const difficulty = 'hard';
 
         function initBoard() {
             board = Array(BOARD_SIZE * BOARD_SIZE).fill(EMPTY);
@@ -252,87 +293,73 @@
         }
 
         function resetGame() {
+            inputLocked = false;
             initBoard();
             renderBoard();
-            document.querySelectorAll('input[name="difficulty"]').forEach(radio => {
-                if (radio.checked) difficulty = radio.value;
-            });
         }
 
         function renderBoard() {
             const gameBoard = document.getElementById('gameBoard');
             gameBoard.innerHTML = '';
-            
             for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.dataset.index = i;
-                
-                if (board[i] === PLAYER) {
-                    cell.classList.add('player-move');
-                } else if (board[i] === AI) {
-                    cell.classList.add('ai-move');
-                }
-                
-                cell.addEventListener('click', () => playerMove(i));
+                if (board[i] === PLAYER) cell.classList.add('player-move');
+                if (board[i] === AI) cell.classList.add('ai-move');
+                cell.addEventListener('pointerdown', (e) => { e.preventDefault(); playerMove(i); }, { passive: false });
+                cell.addEventListener('touchstart', (e) => { e.preventDefault(); playerMove(i); }, { passive: false });
+                cell.addEventListener('contextmenu', (e) => e.preventDefault());
                 gameBoard.appendChild(cell);
             }
         }
 
         function playerMove(index) {
-            if (gameOver || board[index] !== EMPTY) return;
-
+            if (gameOver || inputLocked || board[index] !== EMPTY) return;
+            inputLocked = true;
             board[index] = PLAYER;
             moveHistory.push({ index, player: PLAYER });
-
             if (checkWin(PLAYER)) {
                 showMessage('🎉 你贏了！', 'win');
                 gameOver = true;
+                inputLocked = false;
                 updateUI();
                 renderBoard();
                 return;
             }
-
             updateUI();
             renderBoard();
             setTimeout(aiMove, 500);
         }
 
         function aiMove() {
-            if (gameOver) return;
-
-            showMessage('AI 正在思考...', 'thinking');
-
-            let bestMove;
-            if (difficulty === 'easy') {
-                bestMove = getRandomMove();
-            } else if (difficulty === 'medium') {
-                bestMove = getMediumMove();
-            } else {
-                bestMove = getHardMove();
+            if (gameOver) {
+                inputLocked = false;
+                return;
             }
-
+            showMessage('AI 正在思考...', 'thinking');
+            const bestMove = getHardMove();
             if (bestMove === -1) {
                 showMessage('平手！', 'lose');
                 gameOver = true;
+                inputLocked = false;
                 updateUI();
                 return;
             }
-
             board[bestMove] = AI;
             moveHistory.push({ index: bestMove, player: AI });
-
             if (checkWin(AI)) {
                 showMessage('💀 AI 贏了！', 'lose');
                 gameOver = true;
+                inputLocked = false;
                 updateUI();
                 renderBoard();
                 return;
             }
-
             updateUI();
             renderBoard();
             clearMessage();
+            inputLocked = false;
         }
 
         function getRandomMove() {
@@ -341,28 +368,20 @@
             return candidates[Math.floor(Math.random() * candidates.length)];
         }
 
-        function getMediumMove() {
-            // 优先必胜、必堵；其次选择高评分候选点
+        function getHardMove() {
+            const candidates = getCandidateMoves();
+            if (candidates.length === 0) return -1;
             const win = findWinningMove(AI);
             if (win !== null) return win;
             const block = findBlockingMove(PLAYER);
             if (block !== null) return block;
-            // choose best by quick heuristic
-            const candidates = getCandidateMoves();
-            let best = -1, bestScore = -Infinity;
-            for (let m of candidates) {
-                const score = evaluatePosition(m, AI);
-                if (score > bestScore) { bestScore = score; best = m; }
-            }
-            return best !== -1 ? best : getRandomMove();
-        }
-
-        function getHardMove() {
-            // Use negamax with alpha-beta on candidate moves
-            const candidates = getCandidateMoves();
-            if (candidates.length === 0) return -1;
+            const doubleThreat = findDoubleThreatMove(PLAYER);
+            if (doubleThreat !== null) return doubleThreat;
+            const threat = findThreatMove(PLAYER);
+            if (threat !== null) return threat;
             const depth = Math.min(4, Math.max(2, Math.floor(1000 / candidates.length)));
-            let best = -1, bestScore = -Infinity;
+            let best = -1;
+            let bestScore = -Infinity;
             for (let m of candidates) {
                 board[m] = AI;
                 const score = -negamax(depth - 1, -Infinity, Infinity, PLAYER);
@@ -372,30 +391,6 @@
             return best !== -1 ? best : getRandomMove();
         }
 
-        // Return empty positions adjacent to existing stones (within 2 cells)
-        function getCandidateMoves() {
-            const set = new Set();
-            const dirs = [-1, 1, -BOARD_SIZE, BOARD_SIZE, -BOARD_SIZE-1, -BOARD_SIZE+1, BOARD_SIZE-1, BOARD_SIZE+1];
-            for (let i = 0; i < board.length; i++) {
-                if (board[i] !== EMPTY) {
-                    const r = Math.floor(i / BOARD_SIZE);
-                    const c = i % BOARD_SIZE;
-                    for (let dr = -2; dr <= 2; dr++) {
-                        for (let dc = -2; dc <= 2; dc++) {
-                            const nr = r + dr, nc = c + dc;
-                            if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
-                            const idx = nr * BOARD_SIZE + nc;
-                            if (board[idx] === EMPTY) set.add(idx);
-                        }
-                    }
-                }
-            }
-            // if board is empty, return center
-            if (set.size === 0) return [Math.floor(BOARD_SIZE * BOARD_SIZE / 2)];
-            return Array.from(set);
-        }
-
-        // Evaluation: score potential at index for player (heuristic)
         function evaluatePosition(index, player) {
             const MAX = 1000000;
             const dirs = [[0,1],[1,0],[1,1],[1,-1]];
@@ -404,14 +399,18 @@
                 let count = 1;
                 let openEnds = 0;
                 for (let d = 1; d < 5; d++) {
-                    const ni = index + d*(dir[0]*BOARD_SIZE+dir[1]);
+                    const ni = index + d * (dir[0] * BOARD_SIZE + dir[1]);
                     if (ni < 0 || ni >= BOARD_SIZE*BOARD_SIZE) break;
-                    if (board[ni] === player) count++; else if (board[ni] === EMPTY) { openEnds++; break; } else break;
+                    if (board[ni] === player) count++;
+                    else if (board[ni] === EMPTY) { openEnds++; break; }
+                    else break;
                 }
                 for (let d = 1; d < 5; d++) {
-                    const ni = index - d*(dir[0]*BOARD_SIZE+dir[1]);
+                    const ni = index - d * (dir[0] * BOARD_SIZE + dir[1]);
                     if (ni < 0 || ni >= BOARD_SIZE*BOARD_SIZE) break;
-                    if (board[ni] === player) count++; else if (board[ni] === EMPTY) { openEnds++; break; } else break;
+                    if (board[ni] === player) count++;
+                    else if (board[ni] === EMPTY) { openEnds++; break; }
+                    else break;
                 }
                 if (count >= 5) return MAX;
                 if (count === 4 && openEnds === 2) score += 50000;
@@ -424,26 +423,47 @@
             return score;
         }
 
-        // Negamax with alpha-beta using evaluatePosition as heuristic
+        function getCandidateMoves() {
+            const set = new Set();
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] !== EMPTY) {
+                    const r = Math.floor(i / BOARD_SIZE);
+                    const c = i % BOARD_SIZE;
+                    for (let dr = -2; dr <= 2; dr++) {
+                        for (let dc = -2; dc <= 2; dc++) {
+                            const nr = r + dr;
+                            const nc = c + dc;
+                            if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
+                            const idx = nr * BOARD_SIZE + nc;
+                            if (board[idx] === EMPTY) set.add(idx);
+                        }
+                    }
+                }
+            }
+            if (set.size === 0) return [Math.floor(BOARD_SIZE*BOARD_SIZE/2)];
+            return Array.from(set);
+        }
+
         function negamax(depth, alpha, beta, player) {
             if (checkWin(PLAYER)) return -100000;
             if (checkWin(AI)) return 100000;
             if (depth === 0) {
-                // evaluate board for AI
                 let s = 0;
-                for (let i=0;i<board.length;i++) if (board[i]===AI) s += evaluatePosition(i, AI);
-                for (let i=0;i<board.length;i++) if (board[i]===PLAYER) s -= evaluatePosition(i, PLAYER);
+                for (let i = 0; i < board.length; i++) {
+                    if (board[i] === AI) s += evaluatePosition(i, AI);
+                    if (board[i] === PLAYER) s -= evaluatePosition(i, PLAYER);
+                }
                 return s;
             }
             const moves = getCandidateMoves();
-            if (moves.length===0) return 0;
-            const scored = moves.map(m => { board[m] = player; const v = evaluatePosition(m, player); board[m] = EMPTY; return {m, v}; });
-            scored.sort((a,b)=>b.v - a.v);
+            if (moves.length === 0) return 0;
+            const scored = moves.map(m => { board[m] = player; const v = evaluatePosition(m, player); board[m] = EMPTY; return { m, v }; });
+            scored.sort((a, b) => b.v - a.v);
             let max = -Infinity;
             for (let item of scored) {
                 const m = item.m;
                 board[m] = player;
-                const val = -negamax(depth-1, -beta, -alpha, player===AI?PLAYER:AI);
+                const val = -negamax(depth-1, -beta, -alpha, player === AI ? PLAYER : AI);
                 board[m] = EMPTY;
                 if (val > max) max = val;
                 if (val > alpha) alpha = val;
@@ -452,29 +472,15 @@
             return max;
         }
 
-        
-
-        function isValid(index, dir) {
-            if (index < 0 || index >= BOARD_SIZE * BOARD_SIZE) return false;
-            const row = Math.floor(index / BOARD_SIZE);
-            const col = index % BOARD_SIZE;
-            if (col === 0 && dir[1] === -1) return false;
-            if (col === BOARD_SIZE - 1 && dir[1] === 1) return false;
-            if (row === 0 && dir[0] === -1) return false;
-            if (row === BOARD_SIZE - 1 && dir[0] === 1) return false;
-            return true;
-        }
-
         function findWinningMove(player) {
             for (let i = 0; i < board.length; i++) {
-                if (board[i] === EMPTY) {
-                    board[i] = player;
-                    if (checkWin(player)) {
-                        board[i] = EMPTY;
-                        return i;
-                    }
+                if (board[i] !== EMPTY) continue;
+                board[i] = player;
+                if (checkWin(player)) {
                     board[i] = EMPTY;
+                    return i;
                 }
+                board[i] = EMPTY;
             }
             return null;
         }
@@ -483,30 +489,56 @@
             return findWinningMove(player);
         }
 
-        function checkWin(player) {
-            const directions = [
-                [0, 1], [1, 0], [1, 1], [1, -1]
-            ];
+        function findThreatMove(player) {
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] !== EMPTY) continue;
+                board[i] = player;
+                const score = evaluatePosition(i, player);
+                board[i] = EMPTY;
+                if (score >= 10000) return i;
+            }
+            return null;
+        }
 
+        function countWinningMoves(player) {
+            let count = 0;
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] !== EMPTY) continue;
+                board[i] = player;
+                if (checkWin(player)) count++;
+                board[i] = EMPTY;
+                if (count >= 2) break;
+            }
+            return count;
+        }
+
+        function findDoubleThreatMove(player) {
+            for (let i = 0; i < board.length; i++) {
+                if (board[i] !== EMPTY) continue;
+                board[i] = player;
+                const winCount = countWinningMoves(player);
+                board[i] = EMPTY;
+                if (winCount >= 2) return i;
+            }
+            return null;
+        }
+
+        function checkWin(player) {
+            const directions = [[0,1],[1,0],[1,1],[1,-1]];
             for (let i = 0; i < board.length; i++) {
                 if (board[i] !== player) continue;
-
                 for (let dir of directions) {
                     let count = 1;
                     for (let j = 1; j < 5; j++) {
                         const newIdx = i + j * (dir[0] * BOARD_SIZE + dir[1]);
                         if (!isValidLine(newIdx, i, dir)) break;
-                        if (board[newIdx] === player) count++;
-                        else break;
+                        if (board[newIdx] === player) count++; else break;
                     }
-
                     for (let j = 1; j < 5; j++) {
                         const newIdx = i - j * (dir[0] * BOARD_SIZE + dir[1]);
                         if (!isValidLine(newIdx, i, [-dir[0], -dir[1]])) break;
-                        if (board[newIdx] === player) count++;
-                        else break;
+                        if (board[newIdx] === player) count++; else break;
                     }
-
                     if (count >= 5) return true;
                 }
             }
@@ -519,13 +551,8 @@
             const origCol = origIdx % BOARD_SIZE;
             const newRow = Math.floor(newIdx / BOARD_SIZE);
             const newCol = newIdx % BOARD_SIZE;
-
-            if (dir[0] === 0 && dir[1] !== 0) {
-                return newRow === origRow;
-            }
-            if (dir[1] === 0 && dir[0] !== 0) {
-                return newCol === origCol;
-            }
+            if (dir[0] === 0 && dir[1] !== 0) return newRow === origRow;
+            if (dir[1] === 0 && dir[0] !== 0) return newCol === origCol;
             return Math.abs(newRow - origRow) === Math.abs(newCol - origCol);
         }
 
@@ -533,12 +560,10 @@
             if (moveHistory.length < 2) return;
             moveHistory.pop();
             moveHistory.pop();
-
             board = Array(BOARD_SIZE * BOARD_SIZE).fill(EMPTY);
             for (let move of moveHistory) {
                 board[move.index] = move.player;
             }
-
             gameOver = false;
             updateUI();
             renderBoard();
@@ -550,7 +575,6 @@
             const whiteCount = board.filter(cell => cell === AI).length;
             document.getElementById('blackCount').textContent = blackCount;
             document.getElementById('whiteCount').textContent = whiteCount;
-
             if (!gameOver) {
                 document.getElementById('status').textContent = moveHistory.length % 2 === 0 ? '你的回合' : 'AI 正在思考...';
             }
@@ -563,84 +587,18 @@
         }
 
         function clearMessage() {
-            document.getElementById('message').textContent = '';
-            document.getElementById('message').className = 'message';
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = '';
+            messageDiv.className = 'message';
         }
 
         resetGame();
 
-        // 註冊 Service Worker 以支持 PWA 功能
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./service-worker.js')
-                .then(registration => console.log('Service Worker 已註冊'))
+                .then(() => console.log('Service Worker 已註冊'))
                 .catch(error => console.log('Service Worker 註冊失敗:', error));
         }
-
-        // 安裝提示
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            // 可以在這裡顯示安裝按鈕
-            console.log('可以安裝應用程序');
-        });
-
-        // 安裝成功
-        window.addEventListener('appinstalled', () => {
-            console.log('應用程序已安裝');
-        });
-    </script>
-    <style>
-        #debugPanel {
-            position: fixed;
-            right: 12px;
-            bottom: 12px;
-            width: 320px;
-            max-height: 40vh;
-            background: rgba(0,0,0,0.8);
-            color: #0f0;
-            font-family: monospace;
-            font-size: 12px;
-            padding: 8px;
-            border-radius: 8px;
-            overflow: auto;
-            z-index: 99999;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.5);
-        }
-        #debugPanel .dbgHeader{font-weight:bold;margin-bottom:6px}
-        #debugPanel pre{white-space:pre-wrap;margin:0}
-    </style>
-    <div id="debugPanel" aria-hidden="false">
-        <div class="dbgHeader">Debug</div>
-        <pre id="debugLog">(debug panel)</pre>
-    </div>
-    <script>
-    (function(){
-        try{
-            const pre = document.getElementById('debugLog');
-            function append(msg){
-                if(!pre) return;
-                pre.textContent += '\n' + msg;
-                if(pre.textContent.length>20000) pre.textContent = pre.textContent.slice(-10000);
-                pre.parentElement.scrollTop = pre.parentElement.scrollHeight;
-            }
-            const orig = {log: console.log.bind(console), error: console.error.bind(console), warn: console.warn.bind(console)};
-            ['log','error','warn'].forEach(fn=>{
-                console[fn] = function(...args){
-                    try{ append(fn+': '+args.map(a=>{try{return typeof a==='object'?JSON.stringify(a):String(a)}catch(e){return String(a)}}).join(' ')); }catch(e){}
-                    orig[fn](...args);
-                };
-            });
-            window.addEventListener('error', e=>{
-                append('ERROR: '+(e.message||e)+' at '+(e.filename||'')+':'+(e.lineno||''));
-            });
-            window.addEventListener('unhandledrejection', e=>{
-                append('PromiseReject: '+(e.reason && e.reason.message? e.reason.message : String(e.reason)));
-            });
-            window.__mobileDebug = function(s){ append(String(s)); };
-            console.log('Mobile debug panel enabled');
-        }catch(e){/* silent */}
-    })();
     </script>
 </body>
 </html>

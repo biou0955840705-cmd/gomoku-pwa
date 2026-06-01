@@ -14,9 +14,9 @@
     <title>五子棋遊戲 - AI對手</title>
     <style>
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
 
         body {
@@ -25,27 +25,93 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: radial-gradient(circle at top, rgba(255,255,255,0.18), transparent 30%), linear-gradient(135deg, #1f2b71 0%, #6237a0 55%, #2a91d1 100%);
             padding: 20px;
+            color: #222;
         }
 
         .container {
             text-align: center;
+            width: min(100%, 1024px);
+            padding: 0 12px;
         }
 
         h1 {
             color: white;
-            margin-bottom: 20px;
+            margin-bottom: 6px;
             font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.35);
         }
 
-        .game-info {
+        .app-subtitle {
+            color: rgba(255,255,255,0.88);
+            font-size: 1rem;
+            margin-top: 6px;
+            letter-spacing: 0.02em;
+        }
+
+        .app-header {
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:12px;
+            margin-bottom:14px;
+        }
+
+        .game-meta {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .meta-chip {
+            background: rgba(255,255,255,0.18);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 0.95em;
+            border: 1px solid rgba(255,255,255,0.22);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin: 20px auto 10px;
+            max-width: 980px;
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.92);
+            border-radius: 18px;
+            padding: 18px;
+            text-align: left;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+            min-height: 120px;
+        }
+
+        .feature-card h2 {
+            margin-bottom: 8px;
+            font-size: 1.1em;
+            color: #222;
+        }
+
+        .feature-card p {
+            color: #444;
+            line-height: 1.6;
+            font-size: 0.98em;
+        }
+
+        .game-board-container {
             background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            padding: 22px;
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.22);
+            display: inline-block;
+            margin-bottom: 18px;
         }
 
         .game-info p {
@@ -152,19 +218,51 @@
             transform: scale(0.98);
         }
 
-        .difficulty {
-            margin: 15px 0;
-            color: #333;
+        .game-meta {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
         }
 
-        .difficulty label {
-            margin: 0 15px;
-            font-weight: 500;
+        .meta-chip {
+            background: rgba(255,255,255,0.18);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 0.95em;
+            border: 1px solid rgba(255,255,255,0.22);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
         }
 
-        .difficulty input[type="radio"] {
-            margin-right: 5px;
-            cursor: pointer;
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin: 20px auto 10px;
+            max-width: 980px;
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.92);
+            border-radius: 18px;
+            padding: 18px;
+            text-align: left;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+            min-height: 120px;
+        }
+
+        .feature-card h2 {
+            margin-bottom: 8px;
+            font-size: 1.1em;
+            color: #222;
+        }
+
+        .feature-card p {
+            color: #444;
+            line-height: 1.6;
+            font-size: 0.98em;
         }
 
         .message {
@@ -204,20 +302,25 @@
             <p>黑子數: <span id="blackCount">0</span> | 白子數: <span id="whiteCount">0</span></p>
         </div>
 
-        <div class="difficulty">
-            <label>難度選擇:</label>
-            <label>
-                <input type="radio" name="difficulty" value="easy" checked>
-                簡單
-            </label>
-            <label>
-                <input type="radio" name="difficulty" value="medium">
-                中等
-            </label>
-            <label>
-                <input type="radio" name="difficulty" value="hard">
-                困難
-            </label>
+        <div class="game-meta">
+            <span class="meta-chip">難度：最困難</span>
+            <span class="meta-chip">快速落子保護</span>
+            <span class="meta-chip">離線可玩</span>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h2>遊戲特色</h2>
+                <p>AI 採用多層搜尋、威脅偵測與開路封鎖，保持最高挑戰難度。</p>
+            </div>
+            <div class="feature-card">
+                <h2>玩法提示</h2>
+                <p>優先佔據中心與連線關鍵位置，讓 AI 也難以輕易取勝。</p>
+            </div>
+            <div class="feature-card">
+                <h2>操作優化</h2>
+                <p>快速連點已鎖定，落子完成前無法重複操作，避免誤觸失誤。</p>
+            </div>
         </div>
 
         <div class="game-board-container">
@@ -241,7 +344,8 @@
         let board = [];
         let gameOver = false;
         let moveHistory = [];
-        let difficulty = 'medium';
+        let inputLocked = false;
+        const difficulty = 'hard';
 
         function initBoard() {
             board = Array(BOARD_SIZE * BOARD_SIZE).fill(EMPTY);
@@ -252,11 +356,9 @@
         }
 
         function resetGame() {
+            inputLocked = false;
             initBoard();
             renderBoard();
-            document.querySelectorAll('input[name="difficulty"]').forEach(radio => {
-                if (radio.checked) difficulty = radio.value;
-            });
         }
 
         function renderBoard() {
@@ -274,13 +376,16 @@
                     cell.classList.add('ai-move');
                 }
                 
-                cell.addEventListener('click', () => playerMove(i));
+                cell.addEventListener('pointerdown', (e) => { e.preventDefault(); playerMove(i); }, { passive: false });
+                cell.addEventListener('touchstart', (e) => { e.preventDefault(); playerMove(i); }, { passive: false });
+                cell.addEventListener('contextmenu', (e) => e.preventDefault());
                 gameBoard.appendChild(cell);
             }
         }
 
         function playerMove(index) {
-            if (gameOver || board[index] !== EMPTY) return;
+            if (gameOver || inputLocked || board[index] !== EMPTY) return;
+            inputLocked = true;
 
             board[index] = PLAYER;
             moveHistory.push({ index, player: PLAYER });
@@ -288,6 +393,7 @@
             if (checkWin(PLAYER)) {
                 showMessage('🎉 你贏了！', 'win');
                 gameOver = true;
+                inputLocked = false;
                 updateUI();
                 renderBoard();
                 return;
@@ -299,22 +405,19 @@
         }
 
         function aiMove() {
-            if (gameOver) return;
+            if (gameOver) {
+                inputLocked = false;
+                return;
+            }
 
             showMessage('AI 正在思考...', 'thinking');
 
-            let bestMove;
-            if (difficulty === 'easy') {
-                bestMove = getRandomMove();
-            } else if (difficulty === 'medium') {
-                bestMove = getMediumMove();
-            } else {
-                bestMove = getHardMove();
-            }
+            let bestMove = getHardMove();
 
             if (bestMove === -1) {
                 showMessage('平手！', 'lose');
                 gameOver = true;
+                inputLocked = false;
                 updateUI();
                 return;
             }
@@ -325,6 +428,7 @@
             if (checkWin(AI)) {
                 showMessage('💀 AI 贏了！', 'lose');
                 gameOver = true;
+                inputLocked = false;
                 updateUI();
                 renderBoard();
                 return;
@@ -333,6 +437,7 @@
             updateUI();
             renderBoard();
             clearMessage();
+            inputLocked = false;
         }
 
         function getRandomMove() {
