@@ -401,14 +401,11 @@
         }
 
         function getMediumMove() {
-            // win first
             const win = findWinningMove(AI);
             if (win !== null) return win;
-            // block immediate opponent winning move
             const block = findBlockingMove(PLAYER);
             if (block !== null) return block;
-            // block strong threats (open four / high eval)
-            const threat = findThreatMove(PLAYER);
+            const threat = findDoubleThreatMove(PLAYER) || findThreatMove(PLAYER);
             if (threat !== null) return threat;
             const candidates = getCandidateMoves();
             let best = -1, bestScore = -Infinity;
@@ -422,23 +419,20 @@
         function getHardMove() {
             const candidates = getCandidateMoves();
             if (candidates.length === 0) return -1;
-            // immediate win
             const win = findWinningMove(AI);
             if (win !== null) return win;
-            // immediate block
             const block = findBlockingMove(PLAYER);
             if (block !== null) return block;
-            // block strong threats first
+            const doubleThreat = findDoubleThreatMove(PLAYER);
+            if (doubleThreat !== null) return doubleThreat;
             const threat = findThreatMove(PLAYER);
             if (threat !== null) return threat;
             initZobrist();
-            // iterative deepening with small time budget
-            const timeLimit = 800; // ms
+            const timeLimit = 1000; // ms
             const start = Date.now();
             let best = -1, bestScore = -Infinity;
-            // initial ordering by heuristic
             let ordered = candidates.map(m => ({m, v: evaluatePosition(m, AI)})).sort((a,b)=>b.v-a.v).map(x=>x.m);
-            const maxDepth = Math.min(8, Math.max(2, Math.floor(1000 / Math.max(1, ordered.length))));
+            const maxDepth = Math.min(8, Math.max(2, Math.floor(1200 / Math.max(1, ordered.length))));
             for (let depth = 1; depth <= maxDepth; depth++) {
                 if (Date.now() - start > timeLimit) break;
                 let localBest = -1, localBestScore = -Infinity;
@@ -450,9 +444,7 @@
                     if (score > localBestScore) { localBestScore = score; localBest = m; }
                     if (localBestScore > bestScore) { bestScore = localBestScore; best = localBest; }
                 }
-                // if we found a winning move, break early
                 if (bestScore >= 100000) break;
-                // reorder moves based on last search
                 ordered.sort((a,b)=>{
                     const va = evaluatePosition(a, AI);
                     const vb = evaluatePosition(b, AI);
@@ -463,40 +455,43 @@
         }
 
         function evaluatePosition(index, player) {
-            // pattern-based heuristic: detect open/closed fours, threes, etc.
             const MAX = 1000000;
-            const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            const directions = [[0,1],[1,0],[1,1],[1,-1]];
             let score = 0;
-            for (let dir of dirs) {
-                let count = 1;
-                let openEnds = 0;
-
-                // forward
-                for (let d = 1; d < 5; d++) {
-                    const ni = index + d*(dir[0]*BOARD_SIZE+dir[1]);
-                    if (ni < 0 || ni >= BOARD_SIZE*BOARD_SIZE) break;
-                    if (board[ni] === player) { count++; }
-                    else if (board[ni] === EMPTY) { openEnds++; break; }
-                    else break;
-                }
-                // backward
-                for (let d = 1; d < 5; d++) {
-                    const ni = index - d*(dir[0]*BOARD_SIZE+dir[1]);
-                    if (ni < 0 || ni >= BOARD_SIZE*BOARD_SIZE) break;
-                    if (board[ni] === player) { count++; }
-                    else if (board[ni] === EMPTY) { openEnds++; break; }
-                    else break;
-                }
-
-                if (count >= 5) return MAX;
-                if (count === 4 && openEnds === 2) score += 50000; // open four
-                else if (count === 4 && openEnds === 1) score += 10000; // closed four
-                else if (count === 3 && openEnds === 2) score += 2000; // open three
-                else if (count === 3 && openEnds === 1) score += 200; // closed three
-                else if (count === 2 && openEnds === 2) score += 100; // open two
-                else score += count * count;
+            let highThreats = 0;
+            for (let dir of directions) {
+                const lineScore = evaluateLineInDirection(index, player, dir);
+                if (lineScore >= 5000) highThreats++;
+                score += lineScore;
+            }
+            if (highThreats >= 2) {
+                score += 80000; // double threat bonus
             }
             return score;
+        }
+
+        function evaluateLineInDirection(index, player, dir) {
+            const MAX = 1000000;
+            const opponent = player === AI ? PLAYER : AI;
+            const cells = [];
+            for (let d = -5; d <= 5; d++) {
+                const ni = index + d * (dir[0] * BOARD_SIZE + dir[1]);
+                if (ni < 0 || ni >= BOARD_SIZE * BOARD_SIZE || !isValidLine(ni, index, dir)) {
+                    cells.push('B');
+                } else {
+                    const v = board[ni];
+                    cells.push(v === player ? 'X' : v === EMPTY ? '.' : 'O');
+                }
+            }
+            const line = cells.join('');
+            if (/XXXXX/.test(line)) return MAX;
+            if (/[\.B]XXXX[\.B]/.test(line)) return 100000;
+            if (/[\.B]XXX\.X[\.B]/.test(line) || /[\.B]X\.XXX[\.B]/.test(line) || /[\.B]XX\.XX[\.B]/.test(line)) return 25000;
+            if (/[\.B]XXX[\.B]/.test(line)) return 5000;
+            if (/[\.B]XX\.X[\.B]/.test(line) || /[\.B]X\.XX[\.B]/.test(line)) return 2000;
+            if (/[\.B]XX[\.B]/.test(line)) return 400;
+            if (/[\.B]X[\.B]/.test(line)) return 80;
+            return 0;
         }
 
         // Candidate moves: empty cells near existing stones
@@ -506,8 +501,8 @@
                 if (board[i] !== EMPTY) {
                     const r = Math.floor(i / BOARD_SIZE);
                     const c = i % BOARD_SIZE;
-                    for (let dr = -2; dr <= 2; dr++) {
-                        for (let dc = -2; dc <= 2; dc++) {
+                    for (let dr = -3; dr <= 3; dr++) {
+                        for (let dc = -3; dc <= 3; dc++) {
                             const nr = r + dr, nc = c + dc;
                             if (nr < 0 || nr >= BOARD_SIZE || nc < 0 || nc >= BOARD_SIZE) continue;
                             const idx = nr * BOARD_SIZE + nc;
@@ -581,42 +576,48 @@
         }
 
         function findBlockingMove(player) {
-            // Find immediate winning move for the given player (used to block opponent's win)
             return findWinningMove(player);
         }
 
-        // Detect high-threat moves (e.g., open-four) for a player to block proactively
         function findThreatMove(player) {
             const candidates = getCandidateMoves();
-            for (let idx of candidates) {
-                // simulate placing and evaluate
-                board[idx] = player;
-                const v = evaluatePosition(idx, player);
-                board[idx] = EMPTY;
-                // use threshold consistent with evaluatePosition (open four -> 50000)
-                if (v >= 50000) return idx;
-            }
-            return null;
-        }
-
-        // 強化：如果對手有連續多步形成的潛在威脅，嘗試阻止多個位置（回傳一個優先位置）
-        function findMultiThreat(player) {
-            // count threat occurrences per candidate
-            const candidates = getCandidateMoves();
-            const counts = {};
+            let best = null;
+            let bestScore = -Infinity;
             for (let idx of candidates) {
                 board[idx] = player;
                 const v = evaluatePosition(idx, player);
                 board[idx] = EMPTY;
-                if (v >= 2000) { // treat open-three以上為潛在威脅
-                    counts[idx] = (counts[idx] || 0) + 1;
+                if (v > bestScore) {
+                    bestScore = v;
+                    best = idx;
+                }
+                if (v >= 100000) {
+                    board[idx] = EMPTY;
+                    return idx;
                 }
             }
-            const keys = Object.keys(counts);
-            if (keys.length === 0) return null;
-            // return the candidate with highest count (most threatening)
-            keys.sort((a,b)=>counts[b]-counts[a]);
-            return Number(keys[0]);
+            return bestScore >= 5000 ? best : null;
+        }
+
+        function countThreats(index, player) {
+            let count = 0;
+            const directions = [[0,1],[1,0],[1,1],[1,-1]];
+            for (let dir of directions) {
+                const score = evaluateLineInDirection(index, player, dir);
+                if (score >= 5000) count++; // open three or better
+            }
+            return count;
+        }
+
+        function findDoubleThreatMove(player) {
+            const candidates = getCandidateMoves();
+            for (let idx of candidates) {
+                board[idx] = player;
+                const threats = countThreats(idx, player);
+                board[idx] = EMPTY;
+                if (threats >= 2) return idx;
+            }
+            return null;
         }
 
         function checkWin(player) {
@@ -656,15 +657,13 @@
             const newRow = Math.floor(newIdx / BOARD_SIZE);
             const newCol = newIdx % BOARD_SIZE;
 
-            if (dir[1] !== 0) {
-                const rowDiff = Math.abs(newRow - origRow);
-                const colDiff = Math.abs(newCol - origCol);
-                if (rowDiff !== colDiff) return false;
-            } else if (dir[0] !== 0) {
-                if (newCol !== origCol) return false;
+            if (dir[0] === 0 && dir[1] !== 0) {
+                return newRow === origRow;
             }
-
-            return true;
+            if (dir[1] === 0 && dir[0] !== 0) {
+                return newCol === origCol;
+            }
+            return Math.abs(newRow - origRow) === Math.abs(newCol - origCol);
         }
 
         function undoMove() {

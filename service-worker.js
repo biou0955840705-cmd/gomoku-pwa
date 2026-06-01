@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gomoku-game-v1';
+const CACHE_NAME = 'gomoku-game-v2';
 const urlsToCache = [
   './',
   './index.html',

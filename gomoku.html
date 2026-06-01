@@ -509,15 +509,13 @@
             const newRow = Math.floor(newIdx / BOARD_SIZE);
             const newCol = newIdx % BOARD_SIZE;
 
-            if (dir[1] !== 0) {
-                const rowDiff = Math.abs(newRow - origRow);
-                const colDiff = Math.abs(newCol - origCol);
-                if (rowDiff !== colDiff) return false;
-            } else if (dir[0] !== 0) {
-                if (newCol !== origCol) return false;
+            if (dir[0] === 0 && dir[1] !== 0) {
+                return newRow === origRow;
             }
-
-            return true;
+            if (dir[1] === 0 && dir[0] !== 0) {
+                return newCol === origCol;
+            }
+            return Math.abs(newRow - origRow) === Math.abs(newCol - origCol);
         }
 
         function undoMove() {
