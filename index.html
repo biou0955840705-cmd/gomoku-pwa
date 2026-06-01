@@ -85,6 +85,9 @@
             cursor: pointer;
             position: relative;
             transition: all 0.2s;
+            touch-action: manipulation;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .cell:hover {
@@ -116,6 +119,13 @@
             transform: translate(-50%, -50%);
             border: 2px solid #333;
             box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        /* Mobile touch targets */
+        @media (max-width: 700px) {
+            #gameBoard { grid-template-columns: repeat(15, 44px); }
+            .cell { width: 44px; height: 44px; }
+            .cell.player-move::after, .cell.ai-move::after { width: 34px; height: 34px; }
         }
 
         .controls {
@@ -234,6 +244,31 @@
         let moveHistory = [];
         let difficulty = 'medium';
 
+        // Transposition table (Zobrist hashing)
+        const zobrist = [];
+        let zobristInit = false;
+        const TRANSPOSITION = new Map(); // key: hash|depth -> {value}
+
+        function initZobrist() {
+            if (zobristInit) return;
+            const rnd = () => Math.floor(Math.random() * 0xFFFFFFFF);
+            for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
+                zobrist[i] = [rnd(), rnd(), rnd()]; // index: EMPTY, PLAYER, AI
+            }
+            zobristInit = true;
+        }
+
+        function computeHash() {
+            let h = 0;
+            for (let i = 0; i < board.length; i++) {
+                const v = board[i];
+                if (v !== EMPTY) {
+                    h ^= zobrist[i][v];
+                }
+            }
+            return h >>> 0;
+        }
+
         function initBoard() {
             board = Array(BOARD_SIZE * BOARD_SIZE).fill(EMPTY);
             gameOver = false;
@@ -265,7 +300,12 @@
                     cell.classList.add('ai-move');
                 }
                 
-                cell.addEventListener('click', () => playerMove(i));
+                // 使用 pointerdown 支援觸控/滑鼠/筆，並避免 300ms 延遲
+                cell.addEventListener('pointerdown', (e) => { e.preventDefault(); playerMove(i); }, { passive: false });
+                // fallback for older touch-only browsers
+                cell.addEventListener('touchstart', (e) => { e.preventDefault(); playerMove(i); }, { passive: false });
+                // prevent context menu on long press
+                cell.addEventListener('contextmenu', (e) => e.preventDefault());
                 gameBoard.appendChild(cell);
             }
         }
@@ -349,13 +389,33 @@
         function getHardMove() {
             const candidates = getCandidateMoves();
             if (candidates.length === 0) return -1;
-            const depth = Math.min(4, Math.max(2, Math.floor(1000 / candidates.length)));
+            initZobrist();
+            // iterative deepening with small time budget
+            const timeLimit = 800; // ms
+            const start = Date.now();
             let best = -1, bestScore = -Infinity;
-            for (let m of candidates) {
-                board[m] = AI;
-                const score = -negamax(depth - 1, -Infinity, Infinity, PLAYER);
-                board[m] = EMPTY;
-                if (score > bestScore) { bestScore = score; best = m; }
+            // initial ordering by heuristic
+            let ordered = candidates.map(m => ({m, v: evaluatePosition(m, AI)})).sort((a,b)=>b.v-a.v).map(x=>x.m);
+            const maxDepth = Math.min(8, Math.max(2, Math.floor(1000 / Math.max(1, ordered.length))));
+            for (let depth = 1; depth <= maxDepth; depth++) {
+                if (Date.now() - start > timeLimit) break;
+                let localBest = -1, localBestScore = -Infinity;
+                for (let m of ordered) {
+                    if (Date.now() - start > timeLimit) break;
+                    board[m] = AI;
+                    const score = -negamax(depth - 1, -Infinity, Infinity, PLAYER);
+                    board[m] = EMPTY;
+                    if (score > localBestScore) { localBestScore = score; localBest = m; }
+                    if (localBestScore > bestScore) { bestScore = localBestScore; best = localBest; }
+                }
+                // if we found a winning move, break early
+                if (bestScore >= 100000) break;
+                // reorder moves based on last search
+                ordered.sort((a,b)=>{
+                    const va = evaluatePosition(a, AI);
+                    const vb = evaluatePosition(b, AI);
+                    return vb - va;
+                });
             }
             return best !== -1 ? best : getRandomMove();
         }
@@ -420,8 +480,14 @@
 
         // Negamax with alpha-beta pruning
         function negamax(depth, alpha, beta, player) {
-            if (checkWin(PLAYER)) return -100000;
-            if (checkWin(AI)) return 100000;
+                    if (checkWin(PLAYER)) return -100000;
+                    if (checkWin(AI)) return 100000;
+                    initZobrist();
+                    const h = computeHash();
+                    const ttKey = h + '|' + depth + '|' + player;
+                    if (TRANSPOSITION.has(ttKey)) {
+                        return TRANSPOSITION.get(ttKey);
+                    }
             if (depth === 0) {
                 let s = 0;
                 for (let i=0;i<board.length;i++) if (board[i]===AI) s += evaluatePosition(i, AI);
@@ -443,6 +509,7 @@
                 if (val > alpha) alpha = val;
                 if (alpha >= beta) break;
             }
+            TRANSPOSITION.set(ttKey, max);
             return max;
         }
 
@@ -566,8 +633,29 @@
         // 註冊 Service Worker 以支持 PWA 功能
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./service-worker.js')
-                .then(registration => console.log('Service Worker 已註冊'))
+                .then(registration => {
+                    console.log('Service Worker 已註冊');
+                    // 若已經有等待中的 SW，要求其立即啟用
+                    if (registration.waiting) {
+                        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                    registration.addEventListener('updatefound', () => {
+                        const newSW = registration.installing;
+                        if (newSW) {
+                            newSW.addEventListener('statechange', () => {
+                                if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('新的 Service Worker 已安裝，將在下一個 load 生效');
+                                }
+                            });
+                        }
+                    });
+                })
                 .catch(error => console.log('Service Worker 註冊失敗:', error));
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                console.log('Service Worker controller changed — 重新載入');
+                window.location.reload();
+            });
         }
 
         // 安裝提示

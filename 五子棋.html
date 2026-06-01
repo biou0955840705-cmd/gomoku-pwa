@@ -85,6 +85,9 @@
             cursor: pointer;
             position: relative;
             transition: all 0.2s;
+            touch-action: manipulation;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .cell:hover {
@@ -116,6 +119,12 @@
             transform: translate(-50%, -50%);
             border: 2px solid #333;
             box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+
+        @media (max-width: 700px) {
+            #gameBoard { grid-template-columns: repeat(15, 44px); }
+            .cell { width: 44px; height: 44px; }
+            .cell.player-move::after, .cell.ai-move::after { width: 34px; height: 34px; }
         }
 
         .controls {

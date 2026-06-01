@@ -1,6 +1,8 @@
 const CACHE_NAME = 'gomoku-game-v1';
 const urlsToCache = [
   './',
+  './index.html',
+  './gomoku.html',
   './五子棋.html',
   './manifest.json'
 ];
@@ -34,35 +36,34 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') {
     return;
   }
+  // For navigation requests (HTML) try network first to get latest
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        if (response && response.status === 200) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        }
+        return response;
+      }).catch(() => caches.match('./五子棋.html'))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request)
-      .then(response => {
-        // 如果快取中有，返回快取
-        if (response) {
-          return response;
-        }
-
-        // 否則從網絡獲取
-        return fetch(event.request).then(response => {
-          // 檢查回應有效性
-          if (!response || response.status !== 200 || response.type === 'error') {
-            return response;
-          }
-
-          // 複製回應並添加到快取
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              cache.put(event.request, responseToCache);
-            });
-
-          return response;
-        });
-      })
-      .catch(() => {
-        // 離線時返回快取的主文件
-        return caches.match('./五子棋.html');
-      })
+      .then(response => response || fetch(event.request).then(resp => {
+        if (!resp || resp.status !== 200) return resp;
+        const resClone = resp.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, resClone));
+        return resp;
+      }))
   );
+});
+
+// Listen for messages from client (e.g., to skipWaiting)
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
