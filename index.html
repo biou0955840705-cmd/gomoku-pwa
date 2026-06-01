@@ -361,22 +361,38 @@
         }
 
         function evaluatePosition(index, player) {
-            let score = 0;
+            // pattern-based heuristic: detect open/closed fours, threes, etc.
+            const MAX = 1000000;
             const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+            let score = 0;
             for (let dir of dirs) {
-                let cnt = 1;
+                let count = 1;
+                let openEnds = 0;
+
+                // forward
                 for (let d = 1; d < 5; d++) {
-                    const idx2 = index + d*(dir[0]*BOARD_SIZE+dir[1]);
-                    if (idx2<0||idx2>=BOARD_SIZE*BOARD_SIZE) break;
-                    if (board[idx2]===player) cnt++; else break;
+                    const ni = index + d*(dir[0]*BOARD_SIZE+dir[1]);
+                    if (ni < 0 || ni >= BOARD_SIZE*BOARD_SIZE) break;
+                    if (board[ni] === player) { count++; }
+                    else if (board[ni] === EMPTY) { openEnds++; break; }
+                    else break;
                 }
+                // backward
                 for (let d = 1; d < 5; d++) {
-                    const idx2 = index - d*(dir[0]*BOARD_SIZE+dir[1]);
-                    if (idx2<0||idx2>=BOARD_SIZE*BOARD_SIZE) break;
-                    if (board[idx2]===player) cnt++; else break;
+                    const ni = index - d*(dir[0]*BOARD_SIZE+dir[1]);
+                    if (ni < 0 || ni >= BOARD_SIZE*BOARD_SIZE) break;
+                    if (board[ni] === player) { count++; }
+                    else if (board[ni] === EMPTY) { openEnds++; break; }
+                    else break;
                 }
-                if (cnt>=5) return 100000;
-                score += Math.pow(cnt,2);
+
+                if (count >= 5) return MAX;
+                if (count === 4 && openEnds === 2) score += 50000; // open four
+                else if (count === 4 && openEnds === 1) score += 10000; // closed four
+                else if (count === 3 && openEnds === 2) score += 2000; // open three
+                else if (count === 3 && openEnds === 1) score += 200; // closed three
+                else if (count === 2 && openEnds === 2) score += 100; // open two
+                else score += count * count;
             }
             return score;
         }
@@ -413,8 +429,13 @@
                 return s;
             }
             const moves = getCandidateMoves();
+            if (moves.length === 0) return 0;
+            // move ordering: score moves by heuristic when applied
+            const scored = moves.map(m => { board[m] = player; const v = evaluatePosition(m, player); board[m] = EMPTY; return {m, v}; });
+            scored.sort((a,b) => b.v - a.v);
             let max = -Infinity;
-            for (let m of moves) {
+            for (let item of scored) {
+                const m = item.m;
                 board[m] = player;
                 const val = -negamax(depth-1, -beta, -alpha, player===AI?PLAYER:AI);
                 board[m] = EMPTY;
