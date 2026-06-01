@@ -2,12 +2,12 @@
   "name": "五子棋遊戲 - AI對手",
   "short_name": "五子棋",
   "description": "一款與 AI 對戰的五子棋遊戲，支持多個難度等級",
-  "start_url": "./五子棋.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#667eea",
-  "background_color": "#ffffff",
+  "background_color": "#667eea",
   "icons": [
     {
       "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='96' y='120' font-size='100' text-anchor='middle' fill='white' font-weight='bold'>五</text></svg>",
